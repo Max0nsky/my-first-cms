@@ -26,7 +26,7 @@
                     </span>
                 <?php } ?>
             </h2>
-            <p class="summary"><?php echo htmlspecialchars($article->summary)?></p>
+            <p class="summary"><?php echo mb_substr(htmlspecialchars($article->content), 0, 50) . "..."?></p>
             <img id="loader-identity" src="JS/ajax-loader.gif" alt="gif">
             
             <ul class="ajax-load">
@@ -41,5 +41,3 @@
     </ul>
     <p><a href="./?action=archive">Article Archive</a></p>
 <?php include "templates/include/footer.php" ?>
-
-    
