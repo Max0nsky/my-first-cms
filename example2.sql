@@ -1,0 +1,1 @@
+ALTER TABLE `articles` ADD COLUMN `show`  TINYINT(1) NOT NULL DEFAULT '1';
