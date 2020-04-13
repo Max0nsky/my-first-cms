@@ -38,6 +38,18 @@ switch ($action) {
     case 'deleteCategory':
         deleteCategory();
         break;
+    case 'listUsers':
+        listUsers();
+        break;
+    case 'newUser':
+        newUser();
+        break;
+    case 'editUser':
+        editUser();
+        break;
+    case 'deleteUser':
+        deleteUser();
+        break;    
     default:
         listArticles();
 }
@@ -61,7 +73,30 @@ function login() {
           $_SESSION['username'] = ADMIN_USERNAME;
           header( "Location: admin.php");
 
-        } else {
+        } 
+        //Если не админ, проверяем логин и пароль из базы данных
+        elseif($_POST['username'] != ADMIN_USERNAME ){
+            
+            $conn = new PDO(DB_DSN, DB_USERNAME, DB_PASSWORD);
+            $sql = "SELECT * FROM users WHERE username = :username";
+            $st = $conn->prepare($sql);
+            $st->bindValue(":username", $_POST['username'], PDO::PARAM_STR);
+            $st->execute();
+            $row = $st->fetch();
+            $conn = null;
+            $user = new User($row);
+
+            if (($_POST['username'] == $user->username) && ($_POST['password'] == $user->password)){
+                if ($user->activeUser != 1) {
+                    $results['errorMessage'] = "Извините, доступ запрещён!";
+                    require( TEMPLATE_PATH . "/admin/loginForm.php" );
+                } else {
+                    $_SESSION['username'] = $user->username;
+                    header( "Location: admin.php");
+                } 
+            }
+        }
+        else {
 
           // Ошибка входа: выводим сообщение об ошибке для пользователя
           $results['errorMessage'] = "Неправильный пароль, попробуйте ещё раз.";
@@ -303,4 +338,109 @@ function deleteCategory() {
     header( "Location: admin.php?action=listCategories&status=categoryDeleted" );
 }
 
-        
+/**
+ * Создание пользователя
+ * 
+ * @return null
+ */
+function newUser() {
+	  
+    $results = array();
+    $results['pageTitle'] = "New User";
+    $results['formAction'] = "newUser";
+
+    if ( isset( $_POST['saveChanges'] ) ) {
+
+        $user = new User;
+        $user->storeFormValues( $_POST );
+        $user->insert();
+        header( "Location: admin.php?action=listUsers&status=changesSaved" );
+
+    } elseif ( isset( $_POST['cancel'] ) ) {
+
+        header( "Location: admin.php?action=listUsers" );
+    } else {
+
+        $results['user'] = new User;
+        require( TEMPLATE_PATH . "/admin/editUser.php" );
+    }
+}
+
+
+/**
+ * Редактирование пользователя
+ * 
+ * @return null
+ */
+function editUser() {
+	  
+    $results = array();
+    $results['pageTitle'] = "Edit User";
+    $results['formAction'] = "editUser";
+
+    if (isset($_POST['saveChanges'])) {
+
+        if ( !$user = User::getById( (int)$_POST['userId'] ) ) {
+            header( "Location: admin.php?error=userNotFound" );
+            return;
+        }
+
+        $user->storeFormValues( $_POST );
+        $user->update();
+        header( "Location: admin.php?status=changesSaved" );
+
+    } elseif ( isset( $_POST['cancel'] ) ) {
+        header( "Location: admin.php" );
+    } else {
+        $results['user'] = User::getById((int)$_GET['userId']);
+        require(TEMPLATE_PATH . "/admin/editUser.php");
+    }
+
+}
+
+/**
+ * Удаление пользователя
+ * 
+ * @return null
+ */
+function deleteUser() {
+
+    if ( !$user = User::getById( (int)$_GET['userId'] ) ) {
+        header( "Location: admin.php?error=userNotFound" );
+        return;
+    }
+
+    $user->delete();
+    header( "Location: admin.php?status=userDeleted" );
+}
+
+/**
+ * Просмотр пользователей
+ * 
+ * @return null
+ */
+function listUsers() {
+    $results = array();
+    
+    $data = User::getList();
+    $results['users'] = $data['results'];
+    $results['totalRows'] = $data['totalRows'];
+    
+    $results['pageTitle'] = "Все пользователи";
+
+    if (isset($_GET['error'])) { // вывод сообщения об ошибке (если есть)
+        if ($_GET['error'] == "userNotFound") 
+            $results['errorMessage'] = "Error: User not found.";
+    }
+
+    if (isset($_GET['status'])) { // вывод сообщения (если есть)
+        if ($_GET['status'] == "changesSaved") {
+            $results['statusMessage'] = "Your changes have been saved.";
+        }
+        if ($_GET['status'] == "userDeleted")  {
+            $results['statusMessage'] = "User deleted.";
+        }
+    }
+
+    require(TEMPLATE_PATH . "/admin/listUsers.php" );
+}
