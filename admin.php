@@ -11,12 +11,14 @@ if ($action != "login" && $action != "logout" && !$username) {
 }
 
 switch ($action) {
+// Авторизация
     case 'login':
         login();
         break;
     case 'logout':
         logout();
         break;
+// Статьи
     case 'newArticle':
         newArticle();
         break;
@@ -26,6 +28,7 @@ switch ($action) {
     case 'deleteArticle':
         deleteArticle();
         break;
+// Категории
     case 'listCategories':
         listCategories();
         break;
@@ -38,6 +41,20 @@ switch ($action) {
     case 'deleteCategory':
         deleteCategory();
         break;
+// Подкатегории
+    case 'listSubcategories':
+        listSubcategories();
+       break;
+    case 'newSubcategory':
+        newSubcategory();
+        break;
+    case 'editSubcategory':
+        editSubcategory();
+        break;
+    case 'deleteSubcategory':
+        deleteSubcategory();
+        break;
+// Пользователи
     case 'listUsers':
         listUsers();
         break;
@@ -64,15 +81,15 @@ function login() {
 
     if (isset($_POST['login'])) {
 
-        // Пользователь получает форму входа: попытка авторизировать пользователя
-
-        if ($_POST['username'] == ADMIN_USERNAME 
-                && $_POST['password'] == ADMIN_PASSWORD) {
-
-          // Вход прошел успешно: создаем сессию и перенаправляем на страницу администратора
-          $_SESSION['username'] = ADMIN_USERNAME;
-          header( "Location: admin.php");
-
+        // Получаем форму входа. Если логин 'admin' - сверяем пароль администратора
+        if ($_POST['username'] == ADMIN_USERNAME) {
+            if ($_POST['password'] == ADMIN_PASSWORD) {
+                $_SESSION['username'] = ADMIN_USERNAME;
+                header( "Location: admin.php");
+            } else {
+                $results['errorMessage'] = "Неправильный логин или пароль! Попробуйте войти ещё раз.";
+                require( TEMPLATE_PATH . "/admin/loginForm.php" );
+            }
         } 
         //Если не админ, проверяем логин и пароль из базы данных
         elseif($_POST['username'] != ADMIN_USERNAME ){
@@ -87,6 +104,7 @@ function login() {
             $user = new User($row);
 
             if (($_POST['username'] == $user->username) && ($_POST['password'] == $user->password)){
+                
                 if ($user->activeUser != 1) {
                     $results['errorMessage'] = "Извините, доступ запрещён!";
                     require( TEMPLATE_PATH . "/admin/loginForm.php" );
@@ -95,23 +113,21 @@ function login() {
                     header( "Location: admin.php");
                 } 
             }
+            else {
+                // Ошибка входа: выводим сообщение об ошибке для пользователя
+                $results['errorMessage'] = "Неправильный логин или пароль! Попробуйте войти ещё раз.";
+                require( TEMPLATE_PATH . "/admin/loginForm.php" );
+            }
         }
-        else {
-
-          // Ошибка входа: выводим сообщение об ошибке для пользователя
-          $results['errorMessage'] = "Неправильный пароль, попробуйте ещё раз.";
-          require( TEMPLATE_PATH . "/admin/loginForm.php" );
-        }
-
     } else {
-
       // Пользователь еще не получил форму: выводим форму
       require(TEMPLATE_PATH . "/admin/loginForm.php");
     }
-
 }
 
-
+/**
+ * Выход из админки
+ */
 function logout() {
     unset( $_SESSION['username'] );
     header( "Location: admin.php" );
@@ -150,6 +166,8 @@ function newArticle() {
         $results['article'] = new Article;
         $data = Category::getList();
         $results['categories'] = $data['results'];
+        $data = Subcategory::getList();
+        $results['subcategories'] = $data['results'];
         require( TEMPLATE_PATH . "/admin/editArticle.php" );
     }
 }
@@ -188,6 +206,8 @@ function editArticle() {
         $results['article'] = Article::getById((int)$_GET['articleId']);
         $data = Category::getList();
         $results['categories'] = $data['results'];
+        $data = Subcategory::getList();
+        $results['subcategories'] = $data['results'];
         require(TEMPLATE_PATH . "/admin/editArticle.php");
     }
 
@@ -217,6 +237,12 @@ function listArticles() {
     $results['categories'] = array();
     foreach ($data['results'] as $category) { 
         $results['categories'][$category->id] = $category;
+    }
+
+    $data = Subcategory::getList();
+    $results['subcategories'] = array();
+    foreach ($data['results'] as $subcategory) { 
+        $results['subcategories'][$subcategory->id] = $subcategory;
     }
     
     $results['pageTitle'] = "Все статьи";
@@ -443,4 +469,123 @@ function listUsers() {
     }
 
     require(TEMPLATE_PATH . "/admin/listUsers.php" );
+}
+
+/**
+ * Просмотр подкатегорий
+ */
+function listSubcategories() {
+    $results = array();
+    $data = Subcategory::getList();
+    $results['subcategories'] = $data['results'];
+    $results['totalRows'] = $data['totalRows'];
+    $results['pageTitle'] = "Article Subategories";
+
+    $data = Category::getList();
+    $results['categories'] = array();
+    foreach ($data['results'] as $category) { 
+        $results['categories'][$category->id] = $category;
+    }
+
+    if ( isset( $_GET['error'] ) ) {
+        if ( $_GET['error'] == "subcategoryNotFound" ) $results['errorMessage'] = "Error: Subcategory not found.";
+        if ( $_GET['error'] == "subcategoryContainsArticles" ) $results['errorMessage'] = "Error: Subcategory contains articles. Delete the articles, or assign them to another Subcategory, before deleting this Subcategory.";
+    }
+
+    if ( isset( $_GET['status'] ) ) {
+        if ( $_GET['status'] == "changesSaved" ) $results['statusMessage'] = "Your changes have been saved.";
+        if ( $_GET['status'] == "subcategoryDeleted" ) $results['statusMessage'] = "Subcategory deleted.";
+    }
+
+    require( TEMPLATE_PATH . "/admin/listSubcategories.php" );
+}
+	  
+/**
+ * Создание подкатегории
+ */  
+function newSubcategory() {
+
+    $results = array();
+    $results['pageTitle'] = "New Article Subcategory";
+    $results['formAction'] = "newSubcategory";
+
+    if ( isset( $_POST['saveChanges'] ) ) {
+
+        // User has posted the subcategory edit form: save the new subcategory
+        $subcategory = new Subcategory;
+        $subcategory->storeFormValues( $_POST );
+        $subcategory->insert();
+        header( "Location: admin.php?action=listSubcategories&status=changesSaved" );
+
+    } elseif ( isset( $_POST['cancel'] ) ) {
+
+        // User has cancelled their edits: return to the subcategory list
+        header( "Location: admin.php?action=listSubategories" );
+    } else {
+
+        // User has not posted the subcategory edit form yet: display the form
+        $results['subcategory'] = new Subcategory;
+        $data = Category::getList();
+        $results['categories'] = $data['results'];
+        require( TEMPLATE_PATH . "/admin/editSubcategory.php" );
+    }
+
+}
+
+/**
+ * Изменение подкатегории
+ */
+function editSubcategory() {
+
+    $results = array();
+    $results['pageTitle'] = "Edit Article Subcategory";
+    $results['formAction'] = "editSubcategory";
+
+    if ( isset( $_POST['saveChanges'] ) ) {
+
+        // User has posted the Subcategory edit form: save the Subcategory changes
+
+        if ( !$subcategory = Subcategory::getById( (int)$_POST['subcategoryId'] ) ) {
+          header( "Location: admin.php?action=listSubcategories&error=subcategoryNotFound" );
+          return;
+        }
+
+        $subcategory->storeFormValues( $_POST );
+        $subcategory->update();
+        header( "Location: admin.php?action=listSubcategories&status=changesSaved" );
+
+    } elseif ( isset( $_POST['cancel'] ) ) {
+
+        // User has cancelled their edits: return to the subcategory list
+        header( "Location: admin.php?action=listSubcategories" );
+    } else {
+
+        // User has not posted the subcategory edit form yet: display the form
+        $results['subcategory'] = Subcategory::getById( (int)$_GET['subcategoryId'] );
+        $data = Category::getList();
+        $results['categories'] = $data['results'];
+        require( TEMPLATE_PATH . "/admin/editSubcategory.php" );
+    }
+
+}
+
+/**
+ * Удаление подкатегории
+ */
+function deleteSubcategory() {
+
+    if ( !$subcategory = Subcategory::getById( (int)$_GET['subcategoryId'] ) ) {
+        header( "Location: admin.php?action=listSubcategories&error=subcategoryNotFound" );
+        return;
+    }
+
+    $articles = Article::getList( 1000000, $subcategory->id );
+
+    if ( $articles['totalRows'] > 0 ) {
+        header( "Location: admin.php?action=listSubcategories&error=subcategoryContainsArticles" );
+        return;
+    }
+
+    $subcategory->delete();
+    header( "Location: admin.php?action=listSubcategories&status=subcategoryDeleted" );
 }

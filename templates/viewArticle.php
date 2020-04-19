@@ -6,9 +6,13 @@
     <p class="pubDate">Published on <?php  echo date('j F Y', $results['article']->publicationDate)?>
     
     <?php if ( $results['category'] ) { ?>
-        in 
+        Категория: 
         <a href="./?action=archive&amp;categoryId=<?php echo $results['category']->id?>">
             <?php echo htmlspecialchars($results['category']->name) ?>
+        </a>
+        подкатегория: 
+        <a href="./?action=archive&amp;subcategoryId=<?php echo $results['subcategory']->id?>">
+            <?php echo htmlspecialchars($results['subcategory']->name) ?>
         </a>
     <?php } ?>
         
