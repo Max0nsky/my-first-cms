@@ -48,6 +48,11 @@ class Article
     public $active = null;
 
     /**
+    * @var string Авторы статьи
+    */
+    public $authors = [];
+
+    /**
     * Устанавливаем свойства с помощью значений в заданном массиве
     *
     * @param assoc Значения свойств
@@ -91,7 +96,13 @@ class Article
 
       if (isset($data['subcategoryId'])) {
         $this->subcategoryId = (int) $data['subcategoryId'];      
-    }
+      }
+
+      if(isset($data['authors'])) {
+        foreach($data['authors'] as $author){
+            $this->authors[] = $author;
+        }
+      }
       
       if (isset($data['summary'])) {
           $this->summary = $data['summary'];         
@@ -146,6 +157,19 @@ class Article
         $st->execute();
 
         $row = $st->fetch();
+
+        $sql = "SELECT DISTINCT idUser FROM users_articles WHERE idArticle=:idArticle";
+        $st = $conn->prepare($sql);
+        $st->bindValue(":idArticle", $id, PDO::PARAM_INT);
+        $st->execute();
+        
+        $authors = array();
+        while($author = $st->fetch()){
+            $authors[] = $author['idUser'];
+        }
+
+        $row['authors'] = $authors;
+
         $conn = null;
         
         if ($row) { 
@@ -219,6 +243,21 @@ class Article
         // Получаем общее количество статей, которые соответствуют критерию
         $sql = "SELECT FOUND_ROWS() AS totalRows";
         $totalRows = $conn->query($sql)->fetch();
+
+        // Получаем авторов статьи
+        foreach ($list as $article){
+          $sql = "SELECT DISTINCT idUser FROM users_articles WHERE idArticle=:idArticle";
+          $st = $conn->prepare($sql);
+          $st->bindValue(":idArticle", $article->id, PDO::PARAM_INT);
+          $st->execute();
+          $authors = array();
+
+          while ($author = $st->fetch()) {
+              $authors[] = $author['idUser'];
+          }
+          $article->authors = $authors;
+        }
+
         $conn = null;
         
         return (array(
@@ -257,6 +296,17 @@ class Article
         $st->bindValue( ":active", $this->active, PDO::PARAM_INT);
         $st->execute();
         $this->id = $conn->lastInsertId();
+        
+        //Вставляем авторов
+        foreach ($this->authors as $idUser) {
+          $sql = "INSERT INTO users_articles (idUser, idArticle) VALUES (:idUser, :idArticle)";
+          $st = $conn->prepare($sql);
+          $st->bindValue(":idUser", $idUser, PDO::PARAM_INT);
+          $st->bindValue(":idArticle", $this->id, PDO::PARAM_INT);
+          $st->execute();
+        }
+
+
         $conn = null;
     }
 
@@ -287,6 +337,22 @@ class Article
       $st->bindValue( ":id", $this->id, PDO::PARAM_INT );
       $st->bindValue(":active", $this->active, PDO::PARAM_INT);
       $st->execute();
+
+      // Удаляем записи о статье в таблице связи
+      $sql = "DELETE FROM users_articles WHERE idArticle=:idArticle";
+      $st = $conn->prepare($sql);
+      $st->bindValue(":idArticle", $this->id, PDO::PARAM_INT);
+      $st->execute();
+
+      // Добавляем новые записи в таблицу связи
+      foreach ($this->authors as $idUser) {
+        $sql = "INSERT INTO users_articles (idUser, idArticle) VALUES (:idUser, :idArticle)";
+        $st = $conn->prepare($sql);
+        $st->bindValue(":idUser", $idUser, PDO::PARAM_INT);
+        $st->bindValue(":idArticle", $this->id, PDO::PARAM_INT);
+        $st->execute();
+      }
+
       $conn = null;
     }
 
@@ -298,12 +364,40 @@ class Article
       // Есть ли у объекта статьи ID?
       if ( is_null( $this->id ) ) trigger_error ( "Article::delete(): Attempt to delete an Article object that does not have its ID property set.", E_USER_ERROR );
 
-      // Удаляем статью
       $conn = new PDO( DB_DSN, DB_USERNAME, DB_PASSWORD );
+
+      // Удаляем записи в таблице связи
+      $sql = "DELETE FROM users_articles WHERE idArticle=:idArticle";
+      $st = $conn->prepare($sql);
+      $st->bindValue(":idArticle", $this->id, PDO::PARAM_INT);
+      $st->execute();
+
+      // Удаляем статью
       $st = $conn->prepare ( "DELETE FROM articles WHERE id = :id LIMIT 1" );
       $st->bindValue( ":id", $this->id, PDO::PARAM_INT );
       $st->execute();
       $conn = null;
     }
 
+    /**
+    * Получаем имена авторов по id статьи
+    */
+    public static function getAuthorsById($id)
+    {
+      $conn = new PDO( DB_DSN, DB_USERNAME, DB_PASSWORD );
+      $sql = "SELECT users.username FROM users_articles 
+              LEFT JOIN users ON idUser = users.id 
+              WHERE users_articles.idArticle = :id ";
+      $st = $conn->prepare($sql);
+      $st->bindValue(":id", $id, PDO::PARAM_INT);
+      $st->execute();
+      $conn = null;
+      $list = array();
+      while ($row = $st->fetch()) {
+        $list[] = $row['username'];
+      }
+
+      return $list;
+    }
+    
 }

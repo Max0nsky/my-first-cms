@@ -13,7 +13,7 @@
     <?php if ( isset( $results['errorMessage'] ) ) { ?>
             <div class="errorMessage"><?php echo $results['errorMessage'] ?></div>
     <?php } ?>
-
+    <? print_r($results['article']);?>
             <ul>
 
               <li>
@@ -48,6 +48,16 @@
                 <?php foreach ( $results['subcategories'] as $subcategory ) { ?>
                   <option value="<?php echo $subcategory->id?>"<?php echo ( $subcategory->id == $results['article']->subcategoryId ) ? " selected" : ""?>><?php echo htmlspecialchars( $subcategory->name )?></option>
                 <?php } ?>
+                </select>
+              </li>
+
+              <li>
+                <label for="authors[]">Authors</label>
+                <select name="authors[]" multiple="multiple">
+                    <?php foreach ($results['authors'] as $author) { ?>
+                        <option value="<?php echo $author->id?>"
+                            <?php echo (in_array($author->id, $results['article']->authors)) ? " selected" : ""?>><?php echo htmlspecialchars($author->username)?></option>
+                    <?php } ?>
                 </select>
               </li>
 

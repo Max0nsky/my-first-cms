@@ -168,6 +168,8 @@ function newArticle() {
         $results['categories'] = $data['results'];
         $data = Subcategory::getList();
         $results['subcategories'] = $data['results'];
+        $data = User::getList();
+        $results['authors'] = $data['results'];
         require( TEMPLATE_PATH . "/admin/editArticle.php" );
     }
 }
@@ -192,6 +194,7 @@ function editArticle() {
             return;
         }
 
+        $article->authors = [];
         $article->storeFormValues( $_POST );
         $article->update();
         header( "Location: admin.php?status=changesSaved" );
@@ -208,6 +211,8 @@ function editArticle() {
         $results['categories'] = $data['results'];
         $data = Subcategory::getList();
         $results['subcategories'] = $data['results'];
+        $data = User::getList();
+        $results['authors'] = $data['results'];
         require(TEMPLATE_PATH . "/admin/editArticle.php");
     }
 
@@ -244,6 +249,9 @@ function listArticles() {
     foreach ($data['results'] as $subcategory) { 
         $results['subcategories'][$subcategory->id] = $subcategory;
     }
+    
+    $data = User::getList();
+    $results['authors'] = $data['results'];
     
     $results['pageTitle'] = "Все статьи";
 

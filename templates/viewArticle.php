@@ -15,7 +15,12 @@
             <?php echo htmlspecialchars($results['subcategory']->name) ?>
         </a>
     <?php } ?>
-        
+    <br>Авторы: 
+    <?php  
+    foreach($results['authors'] as $author){
+        echo $author . " ";
+    }
+    ?>  
     </p>
 
     <p><a href="./">Вернуться на главную страницу</a></p>

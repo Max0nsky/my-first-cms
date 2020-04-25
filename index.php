@@ -92,7 +92,8 @@ function viewArticle()
     $results['category'] = Category::getById($results['article']->categoryId);
     $results['subcategory'] = Subcategory::getById($results['article']->subcategoryId);
     $results['pageTitle'] = $results['article']->title . " | Простая CMS";
-    
+    $results['authors'] = Article::getAuthorsById($results['article']->id);
+
     require(TEMPLATE_PATH . "/viewArticle.php");
 }
 
