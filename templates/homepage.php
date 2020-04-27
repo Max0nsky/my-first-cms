@@ -32,14 +32,14 @@
                     </span>
                 <?php } ?>
             </h2>
-            <p class="summary"><?php echo mb_substr(htmlspecialchars($article->content), 0, 50) . "..."?></p>
+            <p class="summary<?php echo $article->id?>"><?php echo mb_substr(htmlspecialchars($article->content), 0, 50) . "..."?></p>
             <img id="loader-identity" src="JS/ajax-loader.gif" alt="gif">
             
             <ul class="ajax-load">
                 <li><a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>" class="ajaxArticleBodyByPost" data-contentId="<?php echo $article->id?>">Показать продолжение (POST)</a></li>
                 <li><a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>" class="ajaxArticleBodyByGet" data-contentId="<?php echo $article->id?>">Показать продолжение (GET)</a></li>
-                <li><a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>" class="">(POST) -- NEW</a></li>
-                <li><a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>" class="">(GET)  -- NEW</a></li>
+                <li><a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>" class="my_ajaxArticleBodyByPost" data-contentId="<?php echo $article->id?>">(POST) -- NEW</a></li>
+                <li><a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>" class="my_ajaxArticleBodyByGet" data-contentId="<?php echo $article->id?>">(GET)  -- NEW</a></li>
             </ul>
             <a href=".?action=viewArticle&amp;articleId=<?php echo $article->id?>" class="showContent" data-contentId="<?php echo $article->id?>">Показать полностью</a>
         </li>
