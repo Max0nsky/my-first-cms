@@ -149,6 +149,14 @@ function newArticle() {
         // Пользователь получает форму редактирования статьи: сохраняем новую статью
         $article = new Article();
         $article->storeFormValues( $_POST );
+
+        // Проверка на соответствие связи (категория - подкатегория)
+        $rows = Article::checkSubcategory($_POST['categoryId'], $_POST['subcategoryId']);
+        if ( $rows[0] < 1 ) {
+            header( "Location: admin.php?action=listSubcategories&error=subcategoryNotMatch" );
+            return;
+        }
+        
 //            echo "<pre>";
 //            print_r($article);
 //            echo "<pre>";
@@ -191,6 +199,13 @@ function editArticle() {
         // Пользователь получил форму редактирования статьи: сохраняем изменения
         if ( !$article = Article::getById( (int)$_POST['articleId'] ) ) {
             header( "Location: admin.php?error=articleNotFound" );
+            return;
+        }
+
+        // Проверка на соответствие связи (категория - подкатегория)
+        $rows = Article::checkSubcategory($_POST['categoryId'], $_POST['subcategoryId']);
+        if ( $rows[0] < 1 ) {
+            header( "Location: admin.php?action=listSubcategories&error=subcategoryNotMatch" );
             return;
         }
 
@@ -497,6 +512,7 @@ function listSubcategories() {
 
     if ( isset( $_GET['error'] ) ) {
         if ( $_GET['error'] == "subcategoryNotFound" ) $results['errorMessage'] = "Error: Subcategory not found.";
+        if ( $_GET['error'] == "subcategoryNotMatch" ) $results['errorMessage'] = "Error: Subcategory does not match category";
         if ( $_GET['error'] == "subcategoryContainsArticles" ) $results['errorMessage'] = "Error: Subcategory contains articles. Delete the articles, or assign them to another Subcategory, before deleting this Subcategory.";
     }
 

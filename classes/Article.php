@@ -399,5 +399,17 @@ class Article
 
       return $list;
     }
-    
+
+    public static function checkSubcategory($categoryId, $subcategoryId)
+    {
+      $conn = new PDO( DB_DSN, DB_USERNAME, DB_PASSWORD );
+      $sql = "SELECT COUNT(*) FROM subcategory WHERE idCategory=:categoryId AND id=:subcategoryId";
+      $st = $conn->prepare($sql);
+      $st->bindValue( ":categoryId", $categoryId, PDO::PARAM_INT );
+      $st->bindValue( ":subcategoryId", $subcategoryId, PDO::PARAM_INT );
+      $st->execute();
+      $totalRows = $st->fetch();
+      $conn = null;
+      return $totalRows;
+    }
 }
